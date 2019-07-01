@@ -1,3 +1,3 @@
-from text_extraction import get_text_from_url
+from data_extraction import get_text_and_links_from_url
 
-print(get_text_from_url("https://en.wikipedia.org/wiki/Chicken"))
+print(get_text_and_links_from_url("https://en.wikipedia.org/wiki/Chicken"))

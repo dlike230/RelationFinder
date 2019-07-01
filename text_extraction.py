@@ -2,8 +2,6 @@ import re
 import urllib
 from urllib.request import Request
 
-from bs4 import BeautifulSoup
-
 web = ["www.", "://", ".com", ".net", ".org", ".us", ".gov"]
 accepted_tags = ["p", "span", "article", "font", "blockquote"]
 exclude = ["cite"]
@@ -162,7 +160,3 @@ def getInp(url):
     return html
 
 
-def get_text_from_url(url):
-    htext = getInp(url)
-    soup = BeautifulSoup(htext, "html.parser")
-    return get_text(soup)
