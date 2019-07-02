@@ -15,6 +15,85 @@ def lemmatize_links_dict(links: dict):
     return {lemmatize_term(key): link for key, link in links.items()}
 
 
+class Token:
+
+    def __init__(self, segment, distance, word=None, end_sentence=False):
+        self.word = word
+        self.end_sentence = end_sentence
+        self.segment = segment
+        self.distance = distance
+
+
+class Segment:
+
+    def __init__(self, central_term_range, sentences, start, end):
+        sentence, (start_word, end_word) = central_term_range
+        central_term_sentence_words = sentences[sentence].words
+        self._tokens = [Token(self, 0, word=term_word) for term_word in
+                        central_term_sentence_words[start_word:end_word + 1]]
+        self._tokens += [token for token in self.after_central_term(central_term_range, sentences, end)]
+
+    def after_central_term(self, central_term_range: tuple, sentences, end: tuple):
+        central_sentence_index, (start_term_word, term_end_word) = central_term_range
+        central_sentence_words = sentences[central_sentence_index].words
+        cumulative_distance = 0
+        end_sentence, end_word = end
+        central_sentence_is_last_sentence = end_sentence == central_sentence_index
+        central_sentence_end_index = term_end_word + 1 if central_sentence_is_last_sentence else len(central_sentence_words)
+
+        # loop through all remaining words in the sentence with the central word
+        for word in central_sentence_words[term_end_word + 1:central_sentence_end_index + 1]:
+            cumulative_distance += 1
+            yield Token(self, cumulative_distance, word=word)
+        if central_sentence_end_index + 1 == len(central_sentence_words):
+            yield Token(self, cumulative_distance, end_sentence=True)
+        else:
+            return
+
+        # loop through all full sentences included in the segment
+        for sentence in sentences[central_sentence_index + 1: end_sentence]:
+            for word in sentence.words:
+                cumulative_distance += 1
+                yield Token(self, cumulative_distance, word=word)
+            yield Token(self, cumulative_distance, end_sentence=True)
+
+        # loop through all words in the last sentence
+        last_sentence_words = sentences[end_sentence].words
+        for word in last_sentence_words[:end_word + 1]:
+            cumulative_distance += 1
+            yield Token(self, cumulative_distance, word=word)
+        if end_word + 1 == len(last_sentence_words):
+            yield Token(self, cumulative_distance, end_sentence=True)
+
+
+
+    def after_central_term(self, central_term_range: tuple, sentences, end: tuple):
+        central_sentence_index, (start_term_word, term_end_word) = central_term_range
+        central_sentence_words = sentences[central_sentence_index].words
+        cumulative_distance = 0
+        end_sentence, end_word = end
+        central_sentence_is_last_sentence = end_sentence == central_sentence_index
+        central_sentence_end_index = term_end_word + 1 if central_sentence_is_last_sentence else len(central_sentence_words)
+
+        # loop through all remaining words in the sentence with the central word
+        for word in central_sentence_words[term_end_word + 1:central_sentence_end_index]:
+            cumulative_distance += 1
+            yield Token(self, cumulative_distance, word=word)
+        yield Token(self, cumulative_distance, end_sentence=True)
+
+        # loop through all full sentences included in the segment
+        for sentence in sentences[central_sentence_index + 1: end_sentence]:
+            for word in sentence.words:
+                cumulative_distance += 1
+                yield Token(self, cumulative_distance, word=word)
+
+        # loop through all words in the last sentence
+        last_sentence_words = sentences[end_sentence].words
+        for word in last_sentence_words[:end_word + 1]:
+            cumulative_distance += 1
+            yield Token(self, cumulative_distance, word=word)
+
+
 class DistanceModel:
     def __init__(self, sentences, target_term):
         self.sentences = sentences
@@ -62,7 +141,7 @@ class DistanceModel:
 
     def compute_segments(self):
         endpoints = [endpoint for endpoint in self.compute_segment_endpoints()]
-        return list(zip(endpoints[:-1], endpoints[1:]))
+        return zip([(0, 0)] + endpoints, endpoints + [(len(self.sentences) - 1, len(self.sentences[-1].words) - 1)])
 
 
 class WikiPage:
