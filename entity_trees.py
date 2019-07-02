@@ -10,6 +10,9 @@ class SimpleLinkedListNode:
         self.next = None
         self.previous = None
 
+    def replace_val(self, new_val):
+        self.value = new_val
+
 
 class SimpleLinkedList:
 
@@ -27,10 +30,11 @@ class SimpleLinkedList:
             self._tail.next = new_node
 
     def walk(self):
-        current_node_record = [self._head]
+        current_node_record = [None]
+
         def remove():
             current_node = current_node_record[0]
-            if current_node.prev is None:
+            if current_node.previous is None:
                 self._head = current_node.next
                 if self._head is None:
                     self._tail = None
@@ -39,36 +43,67 @@ class SimpleLinkedList:
                     current_node.next.previous = None
                     current_node_record[0] = current_node.next
             else:
-                walk_record[0].next = walk_record[1].next
-                if walk_record[0].next is None:
-                    self._tail = walk_record[0]
-                walk_record[1]
-        return NamedTuple(remove=remove)
+                current_node_record[0] = current_node.next
+                if current_node.next is None:
+                    self._tail = current_node.previous
+                current_node.previous.next = current_node.next
+
+        def replace(self, new_val):
+            self.current_node_record[0].replace_val(new_val)
+
+        def iterate():
+            current_node = current_node_record[0]
+            if current_node is None:
+                current_node = self._head
+            else:
+                current_node = current_node.next
+            if current_node is None:
+                return
+            current_node_record[0] = current_node
+            yield current_node
+
+        return remove, replace, iterate()
 
 
 class EntityTreeNode:
     def __init__(self):
-        self._lemmas = {}
+        self._children = {}
+        self.parent = None
+        self.contains_term = False
+
+    def back_trace(self):
+        if self.parent is None:
+            yield self
+        else:
+            yield from self.parent.back_trace()
 
     def push(self, lemma_list, lemma_list_index=0):
         lemma_selected = lemma_list[lemma_list_index]
         selected_node = None
-        if lemma_selected in self._lemmas:
-            selected_node = self._lemmas[lemma_selected]
+        if lemma_selected in self._children:
+            selected_node = self._children[lemma_selected]
         else:
             selected_node = EntityTreeNode()
-            self._lemmas[lemma_selected] = selected_node
+            self._children[lemma_selected] = selected_node
+            selected_node.parent = self
         new_index = lemma_list_index + 1
         if new_index == len(lemma_list):
+            self.contains_term = True
             return
         selected_node.push(lemma_list, new_index)
+
+    def traverse(self, lemma):
+        if lemma in self._children:
+            return self._children[lemma]
+        else:
+            return None
 
 
 class WalkableEntityTree:
 
     def __init__(self):
         self._root = None
-        self._potential_terms_queue = []
+        self._potential_terms_queue = SimpleLinkedList()
 
     def push(self, term):
         term_blob = TextBlob(term)
@@ -77,5 +112,24 @@ class WalkableEntityTree:
             self._root = EntityTreeNode()
         self._root.push(lemmas)
 
-    def test(self, word):
+    def accept_word(self, word):
         lemma = word.lemmatize()
+        potential_branch = self._root.traverse(lemma)
+        new_branch_exists = potential_branch is not None
+        if new_branch_exists and potential_branch.contains_term:
+            yield potential_branch
+        remover, replacer, iterator = self._potential_terms_queue.walk()
+        for branch in iterator:
+            branch = branch.traverse(lemma)
+            if branch is None:
+                remover()
+            else:
+                replacer(branch)
+                if branch.contains_term:
+                    yield branch
+        self._potential_terms_queue.append(potential_branch)
+
+    def reset(self):
+        self._potential_terms_queue = SimpleLinkedList()
+
+
