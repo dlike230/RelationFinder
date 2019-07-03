@@ -1,3 +1,3 @@
-from data_extraction import get_text_and_links_from_url
+from data_extraction import WikiPage
 
-print(get_text_and_links_from_url("https://en.wikipedia.org/wiki/Chicken"))
+print(WikiPage("https://en.wikipedia.org/wiki/Europe", "European Union"))
