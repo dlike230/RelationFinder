@@ -1,3 +1,5 @@
+import itertools
+
 from bs4 import BeautifulSoup
 from textblob import TextBlob
 
@@ -27,71 +29,68 @@ class Token:
 class Segment:
 
     def __init__(self, central_term_range, sentences, start, end):
-        sentence, (start_word, end_word) = central_term_range
-        central_term_sentence_words = sentences[sentence].words
-        self._tokens = [Token(self, 0, word=term_word) for term_word in
-                        central_term_sentence_words[start_word:end_word + 1]]
-        self._tokens += [token for token in self.after_central_term(central_term_range, sentences, end)]
+        self.central_term_range = central_term_range
+        self.sentences = sentences
+        self.start = start
+        self.end = end
 
-    def after_central_term(self, central_term_range: tuple, sentences, end: tuple):
-        central_sentence_index, (start_term_word, term_end_word) = central_term_range
+    def tokens(self):
+        yield from self.outside_central_term(self.central_term_range, self.sentences, self.start, False)[::-1]
+        central_sentence_index, (start_word, end_word) = self.central_term_range
+        for term_word in self.sentences[central_sentence_index][start_word: end_word + 1]:
+            yield Token(self, 0, word=term_word)
+        yield from self.outside_central_term(self.central_term_range, self.sentences, self.end, True)
+
+    def outside_central_term(self, central_term_range: tuple, sentences, outer_bound: tuple, move_right):
+        central_sentence_index, (start_term_index, end_term_index) = central_term_range
         central_sentence_words = sentences[central_sentence_index].words
         cumulative_distance = 0
-        end_sentence, end_word = end
-        central_sentence_is_last_sentence = end_sentence == central_sentence_index
-        central_sentence_end_index = term_end_word + 1 if central_sentence_is_last_sentence else len(central_sentence_words)
+        outer_sentence_index, outer_word_index = outer_bound
+        central_sentence_is_outer = outer_sentence_index == central_sentence_index
 
         # loop through all remaining words in the sentence with the central word
-        for word in central_sentence_words[term_end_word + 1:central_sentence_end_index + 1]:
-            cumulative_distance += 1
-            yield Token(self, cumulative_distance, word=word)
-        if central_sentence_end_index + 1 == len(central_sentence_words):
-            yield Token(self, cumulative_distance, end_sentence=True)
+        central_sentence_start_index = -1
+        central_sentence_end_index = -1
+        if move_right:
+            central_sentence_start_index = min(end_term_index + 1, len(central_sentence_words) - 1)
+            central_sentence_end_index = outer_word_index if central_sentence_is_outer else len(
+                central_sentence_words) - 1
         else:
+            central_sentence_start_index = max(start_term_index - 1, 0)
+            central_sentence_end_index = outer_word_index if central_sentence_is_outer else 0
+
+        first_index = min(central_sentence_start_index, central_sentence_end_index)
+        last_index = max(central_sentence_start_index, central_sentence_end_index)
+        direction = 1 if move_right else -1
+        for word in central_sentence_words[first_index: last_index + 1: direction]:
+            cumulative_distance += 1
+            yield Token(self, cumulative_distance, word=word)
+        if first_index != 0 and not move_right:
             return
-
-        # loop through all full sentences included in the segment
-        for sentence in sentences[central_sentence_index + 1: end_sentence]:
-            for word in sentence.words:
-                cumulative_distance += 1
-                yield Token(self, cumulative_distance, word=word)
-            yield Token(self, cumulative_distance, end_sentence=True)
-
-        # loop through all words in the last sentence
-        last_sentence_words = sentences[end_sentence].words
-        for word in last_sentence_words[:end_word + 1]:
-            cumulative_distance += 1
-            yield Token(self, cumulative_distance, word=word)
-        if end_word + 1 == len(last_sentence_words):
-            yield Token(self, cumulative_distance, end_sentence=True)
-
-
-
-    def after_central_term(self, central_term_range: tuple, sentences, end: tuple):
-        central_sentence_index, (start_term_word, term_end_word) = central_term_range
-        central_sentence_words = sentences[central_sentence_index].words
-        cumulative_distance = 0
-        end_sentence, end_word = end
-        central_sentence_is_last_sentence = end_sentence == central_sentence_index
-        central_sentence_end_index = term_end_word + 1 if central_sentence_is_last_sentence else len(central_sentence_words)
-
-        # loop through all remaining words in the sentence with the central word
-        for word in central_sentence_words[term_end_word + 1:central_sentence_end_index]:
-            cumulative_distance += 1
-            yield Token(self, cumulative_distance, word=word)
+        if last_index != len(central_sentence_words) and move_right:
+            return
         yield Token(self, cumulative_distance, end_sentence=True)
+        first_sentence = min(central_sentence_index, outer_sentence_index)
+        last_sentence = max(central_sentence_index, outer_sentence_index)
 
-        # loop through all full sentences included in the segment
-        for sentence in sentences[central_sentence_index + 1: end_sentence]:
-            for word in sentence.words:
+        # loop through all full sentences included in the segment between the first and the last
+        for sentence in sentences[first_sentence + 1: last_sentence: direction]:
+            for word in sentence.words[::-1]:
                 cumulative_distance += 1
                 yield Token(self, cumulative_distance, word=word)
+            yield Token(self, cumulative_distance, end_sentence=True)
 
         # loop through all words in the last sentence
-        last_sentence_words = sentences[end_sentence].words
-        for word in last_sentence_words[:end_word + 1]:
+        outer_sentence_words = sentences[outer_sentence_index].words
+        outer_sentence_inner_word_index = 0 if not move_right else len(outer_sentence_words) - 1
+        first_word_index = min(outer_sentence_inner_word_index, outer_word_index)
+        last_word_index = max(outer_sentence_inner_word_index, outer_word_index)
+        for word in outer_sentence_words[first_word_index: last_word_index + 1: direction]:
             cumulative_distance += 1
             yield Token(self, cumulative_distance, word=word)
+        if outer_word_index == 0 and not move_right or outer_word_index == len(
+                outer_sentence_words) - 1 and not move_right:
+            yield Token(self, cumulative_distance, end_sentence=True)
 
 
 class DistanceModel:
