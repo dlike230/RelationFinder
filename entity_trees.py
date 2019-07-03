@@ -48,8 +48,8 @@ class SimpleLinkedList:
                     self._tail = current_node.previous
                 current_node.previous.next = current_node.next
 
-        def replace(self, new_val):
-            self.current_node_record[0].replace_val(new_val)
+        def replace(new_val):
+            current_node_record[0].replace_val(new_val)
 
         def iterate():
             current_node = current_node_record[0]
@@ -60,7 +60,7 @@ class SimpleLinkedList:
             if current_node is None:
                 return
             current_node_record[0] = current_node
-            yield current_node
+            yield current_node.value
 
         return remove, replace, iterate()
 
@@ -107,7 +107,7 @@ class WalkableEntityTree:
 
     def push(self, term):
         term_blob = TextBlob(term)
-        lemmas = [word.lemmatize() for word in term_blob]
+        lemmas = [word.lemmatize() for word in term_blob.words]
         if self._root is None:
             self._root = EntityTreeNode()
         self._root.push(lemmas)
@@ -121,14 +121,15 @@ class WalkableEntityTree:
             yield potential_branch
         remover, replacer, iterator = self._potential_terms_queue.walk()
         for branch in iterator:
-            branch = branch.traverse(lemma)
-            if branch is None:
+            new_branch = branch.traverse(lemma)
+            if new_branch is None:
                 remover()
             else:
-                replacer(branch)
-                if branch.contains_term:
-                    yield branch
-        self._potential_terms_queue.append(potential_branch)
+                replacer(new_branch)
+                if new_branch.contains_term:
+                    yield new_branch
+        if new_branch_exists:
+            self._potential_terms_queue.append(potential_branch)
 
     def reset(self):
         self._potential_terms_queue = SimpleLinkedList()

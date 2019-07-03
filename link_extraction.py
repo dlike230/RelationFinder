@@ -12,6 +12,6 @@ def extract_links_generator(soup: BeautifulSoup):
             # not a valid wiki link
             return
         yield soup.get_text(), link
-    elif soup.children is not None:
+    elif hasattr(soup, "children") and soup.children is not None:
         for child in soup.children:
             yield from extract_links_generator(child)

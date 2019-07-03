@@ -38,7 +38,8 @@ class Segment:
         self._end = end
 
     def tokens(self):
-        yield from self._outside_central_term(self._central_term_range, self._sentences, self._start, False)[::-1]
+        yield from reversed(
+            list(self._outside_central_term(self._central_term_range, self._sentences, self._start, False)))
         central_sentence_index, (start_word, end_word) = self._central_term_range
         for term_word in self._sentences[central_sentence_index][start_word: end_word + 1]:
             yield Token(self, 0, word=term_word)
@@ -70,7 +71,7 @@ class Segment:
             yield Token(self, cumulative_distance, word=word)
         if first_index != 0 and not move_right:
             return
-        if last_index != len(central_sentence_words) and move_right:
+        if last_index + 1 != len(central_sentence_words) and move_right:
             return
         yield Token(self, cumulative_distance, end_sentence=True)
         first_sentence = min(central_sentence_index, outer_sentence_index)
@@ -96,7 +97,7 @@ class Segment:
             yield Token(self, cumulative_distance, end_sentence=True)
 
     def __repr__(self):
-        " ".join(repr(token) for token in self.tokens())
+        return " ".join(repr(token) for token in self.tokens())
 
 
 class DistanceModel:
@@ -115,6 +116,7 @@ class DistanceModel:
             for i, word in enumerate(sentence.words):
                 target_term_list = list(target_term_finder.accept_word(word))
                 if len(target_term_list) == 0:
+                    total_accumulation += 1
                     continue
                 yield i, total_accumulation, s
                 total_accumulation += 1
@@ -126,7 +128,7 @@ class DistanceModel:
         if len(segment_centers) == 1:
             center_word_index, _, center_sentence_index = segment_centers[0]
             yield (center_word_index, center_sentence_index), (
-            len(self.sentences) - 1, len(self.sentences[-1].words) - 1)
+                len(self.sentences) - 1, len(self.sentences[-1].words) - 1)
             return
         for first_center, second_center in zip(segment_centers[:-1], segment_centers[1:]):
             first_center_word_index, start_accumulation, first_center_sentence_index = first_center
@@ -138,7 +140,7 @@ class DistanceModel:
                 sentence_words = sentence.words
                 accumulation_after_sentence = current_accumulation + len(sentence_words)
                 if accumulation_after_sentence <= target_accumulation:
-                    current_accumulation += accumulation_after_sentence
+                    current_accumulation = accumulation_after_sentence
                     first_center_word_index = 0
                     continue
                 for word_index, word in enumerate(sentence_words[first_center_word_index:]):
@@ -147,24 +149,24 @@ class DistanceModel:
                         boundary_sentence_index = enumerated_sentence_index + first_center_sentence_index
                         boundary_word_index = word_index + first_center_word_index
                         yield (first_center_word_index, first_center_sentence_index), (
-                        boundary_sentence_index, boundary_word_index)
+                            boundary_sentence_index, boundary_word_index)
                         break
                 first_center_word_index = 0
         last_center_word_index, end_accumulation, last_center_sentence_index = segment_centers[-1]
         yield (last_center_word_index, last_center_sentence_index), (
-        len(self.sentences) - 1, len(self.sentences[-1]) - 1)
+            len(self.sentences) - 1, len(self.sentences[-1]) - 1)
 
     def _compute_segments(self):
         last_endpoint = 0, 0
         for center_data, endpoint_data in self._compute_segment_endpoints():
             center_word_index_end, center_sentence_index = center_data
             center_word_index_start = center_word_index_end - self._target_term_length + 1
-            yield Segment((center_word_index_start, center_word_index_start), self.sentences, last_endpoint,
-                          endpoint_data)
+            yield Segment((center_sentence_index, (center_word_index_start, center_word_index_start)), self.sentences,
+                          last_endpoint, endpoint_data)
             last_endpoint = endpoint_data
 
     def __repr__(self):
-        return "\n\n\tSEGMENT:\n".join(str(segment) for segment in self.segments)
+        return "\n\n\tSEGMENT:\n".join(repr(segment) for segment in self.segments)
 
 
 class WikiPage:
