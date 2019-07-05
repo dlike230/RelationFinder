@@ -107,14 +107,13 @@ class WalkableEntityTree:
 
     def push(self, term):
         term_blob = TextBlob(term)
-        lemmas = [word.lemmatize() for word in term_blob.words]
+        lemmas = [word.lemmatize().lower() for word in term_blob.words]
         if self._root is None:
             self._root = EntityTreeNode()
         self._root.push(lemmas)
         return len(lemmas)
 
-    def accept_word(self, word):
-        lemma = word.lemmatize()
+    def accept_lemma(self, lemma):
         potential_branch = self._root.traverse(lemma)
         new_branch_exists = potential_branch is not None
         if new_branch_exists and potential_branch.contains_term:
