@@ -41,7 +41,7 @@ class Segment:
     def tokens(self):
         selected = self.start
         end_index = self.end.index
-        center_index = self.center.index
+        center_index = self.center.index if self.center is not None else 1E99
         while selected is not None and selected.index <= end_index:
             distance = abs(selected.index - center_index)
             yield Token(self, distance, word=selected)

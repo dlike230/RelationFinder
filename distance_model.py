@@ -23,10 +23,10 @@ class Entry:
 
 class PriorityQueue:
 
-    def __init__(self, init_values=None):
-        if init_values is None:
-            init_values = []
-        self.entries = init_values
+    def __init__(self, init_entries=None):
+        if init_entries is None:
+            init_entries = []
+        self.entries = init_entries
         self.value_to_index = {entry.value: i for i, entry in enumerate(self.entries)}
         for i in range(len(self.entries))[::-1]:
             self.min_heapify(i)
@@ -117,7 +117,8 @@ class DistanceModel:
 
     def __init__(self, start_term, target_term):
         self.result = None
-        start_page = WikiPage(get_wiki_url(start_term), target_term)
+        start_page = WikiPage(get_wiki_url(start_term), start_term)
+        self.start_term = start_term
         self.target_term = target_term
         init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in start_page.distance_generator()]
         self.queue = PriorityQueue(init_entries)
@@ -126,7 +127,7 @@ class DistanceModel:
         if link.is_target:
             self.result = " ".join(link.get_linked_text())
             return True
-        new_page = WikiPage(get_wiki_url(link.original_link_text), self.target_term)
+        new_page = WikiPage(get_wiki_url(link.original_link_text), link.original_link_text)
         for link, additional_distance, text_func in new_page.distance_generator():
             new_distance = additional_distance + distance
             old_distance = self.queue.get_key(link.lemmatized_link_text)
@@ -137,6 +138,8 @@ class DistanceModel:
         return False
 
     def iterate(self):
+        for temp in self.queue.entries:
+            print(temp.value.lemmatized_link_text)
         entry = self.queue.pop()
         return self.process_link(entry.value, entry.key)
 

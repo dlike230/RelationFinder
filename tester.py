@@ -1,3 +1,8 @@
-from WikiModel import WikiPage
+from distance_model import DistanceModel
 
-print(WikiPage("https://en.wikipedia.org/wiki/Cambridge_Gulf", "cambridge gulf"))
+model = DistanceModel("cherry", "apple")
+
+while not model.iterate():
+    pass
+
+print(model.result)
