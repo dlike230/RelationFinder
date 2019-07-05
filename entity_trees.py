@@ -69,7 +69,7 @@ class EntityTreeNode:
     def __init__(self):
         self._children = {}
         self.parent = None
-        self.contains_term = False
+        self.contained_data = None
 
     def back_trace(self):
         if self.parent is None:
@@ -77,7 +77,7 @@ class EntityTreeNode:
         else:
             yield from self.parent.back_trace()
 
-    def push(self, lemma_list, lemma_list_index=0):
+    def push(self, lemma_list, contained_data, lemma_list_index=0):
         lemma_selected = lemma_list[lemma_list_index]
         selected_node = None
         if lemma_selected in self._children:
@@ -88,9 +88,9 @@ class EntityTreeNode:
             selected_node.parent = self
         new_index = lemma_list_index + 1
         if new_index == len(lemma_list):
-            self.contains_term = True
+            self.contained_data = contained_data
             return
-        selected_node.push(lemma_list, new_index)
+        selected_node.push(lemma_list, contained_data, new_index)
 
     def traverse(self, lemma):
         if lemma in self._children:
@@ -105,18 +105,21 @@ class WalkableEntityTree:
         self._root = None
         self._potential_terms_queue = SimpleLinkedList()
 
-    def push(self, term):
+    def push(self, term, associated_data=True):
         term_blob = TextBlob(term)
         lemmas = [word.lemmatize().lower() for word in term_blob.words]
+        return self.push_lemmas(lemmas, associated_data)
+
+    def push_lemmas(self, lemmas, associated_data=True):
         if self._root is None:
             self._root = EntityTreeNode()
-        self._root.push(lemmas)
+        self._root.push(lemmas, associated_data)
         return len(lemmas)
 
     def accept_lemma(self, lemma):
         potential_branch = self._root.traverse(lemma)
         new_branch_exists = potential_branch is not None
-        if new_branch_exists and potential_branch.contains_term:
+        if new_branch_exists and potential_branch.contained_data is not None:
             yield potential_branch
         remover, replacer, iterator = self._potential_terms_queue.walk()
         for branch in iterator:
@@ -125,7 +128,7 @@ class WalkableEntityTree:
                 remover()
             else:
                 replacer(new_branch)
-                if new_branch.contains_term:
+                if new_branch.contained_data is not None:
                     yield new_branch
         if new_branch_exists:
             self._potential_terms_queue.append(potential_branch)

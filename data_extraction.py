@@ -1,22 +1,7 @@
-import itertools
-import math
-
-from bs4 import BeautifulSoup
 from textblob import TextBlob
 
 from LinkedListModel import LinkedText, midpoint
 from entity_trees import WalkableEntityTree
-from link_extraction import extract_links
-from text_extraction import getInp, get_text
-
-
-def lemmatize_term(term):
-    term_blob = TextBlob(term)
-    return " ".join(word.lemmatize().lower() for word in term_blob.words)
-
-
-def lemmatize_links_dict(links: dict):
-    return {lemmatize_term(key): link for key, link in links.items()}
 
 
 class Token:
@@ -53,7 +38,7 @@ class Segment:
         return " ".join(repr(token) for token in self.tokens())
 
 
-class DistanceModel:
+class PageDistances:
     def __init__(self, linked_text, target_term):
         self.linked_text = linked_text
         self.target_term = target_term
@@ -82,19 +67,14 @@ class DistanceModel:
             last_center = center
         yield Segment(start, last_center, self.linked_text[-1][-1])
 
+    def read(self, term_locator: WalkableEntityTree):
+        for segment in self.segments:
+            for token in segment.tokens():
+                if token.word is None:
+                    term_locator.reset()
+                    continue
+                for potential_result in term_locator.accept_lemma(token.word):
+                    yield potential_result.contained_data, token.distance
+
     def __repr__(self):
         return "\n\n".join("\tSEGMENT:\n" + repr(segment) for segment in self.segments)
-
-
-class WikiPage:
-
-    def __init__(self, url, target_term):
-        htext = getInp(url)
-        soup = BeautifulSoup(htext, "html.parser")
-        text = get_text(soup)
-        text_blob = TextBlob(text)
-        self.distance_model = DistanceModel(LinkedText(text_blob), target_term)
-        self.links = lemmatize_links_dict(extract_links(soup))
-
-    def __repr__(self):
-        return repr(self.distance_model)
