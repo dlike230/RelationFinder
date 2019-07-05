@@ -1,3 +1,7 @@
+from WikiModel import WikiPage
+from utils import get_wiki_url
+
+
 class Entry:
 
     def __init__(self, key, value):
@@ -38,6 +42,15 @@ class PriorityQueue:
     @staticmethod
     def parent(index):
         return (index - 1) // 2
+
+    def change_key(self, value, new_key):
+        index = self.value_to_index[value]
+        entry = self.entries[index]
+        old_key = entry.key
+        if old_key <= new_key:
+            entry.key = old_key
+        else:
+            self.decrease_key(index, new_key)
 
     def decrease_key(self, index, new_key):
         target_entry = self.entries[index]
@@ -84,6 +97,14 @@ class PriorityQueue:
             self.value_to_index[min_entry.value] = start_index
             self.min_heapify(min_index)
 
+    def __contains__(self, item):
+        return item in self.value_to_index
+
+    def get_key(self, value):
+        if value in self.value_to_index:
+            return self.entries[self.value_to_index[value]].key
+        return None
+
     def pop(self):
         first_entry = self.entries[0]
         self.entries[0] = self.entries[-1]
@@ -94,10 +115,28 @@ class PriorityQueue:
 
 class DistanceModel:
 
-    def __init__(self, start_page):
-        init_entries = [Entry(distance, link) for link, distance in start_page.distance_generator()]
+    def __init__(self, start_term, target_term):
+        self.result = None
+        start_page = WikiPage(get_wiki_url(start_term), target_term)
+        self.target_term = target_term
+        init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in start_page.distance_generator()]
         self.queue = PriorityQueue(init_entries)
 
     def process_link(self, link, distance):
         if link.is_target:
-            pass
+            self.result = " ".join(link.get_linked_text())
+            return True
+        new_page = WikiPage(get_wiki_url(link.original_link_text), self.target_term)
+        for link, additional_distance, text_func in new_page.distance_generator():
+            new_distance = additional_distance + distance
+            old_distance = self.queue.get_key(link.lemmatized_link_text)
+            if old_distance is None:
+                self.queue.push(new_distance, link.set_text_func(text_func))
+            elif new_distance < old_distance:
+                self.queue.change_key(link.lemmatized_link_text, new_distance)
+        return False
+
+    def iterate(self):
+        entry = self.queue.pop()
+        return self.process_link(entry.value, entry.key)
+

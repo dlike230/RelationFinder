@@ -15,13 +15,28 @@ class Token:
     def __repr__(self):
         return repr(self.word if self.word is not None else ".") + " " + "(%d)" % self.distance
 
+    @property
+    def text_generator(self):
+        def sentence_text_generator():
+            center_sentence = self.segment.center
+            center_sentence_index = center_sentence.parent_index
+            my_sentence = self.word.parent
+            word_sentence_index = my_sentence.parent_index
+            relevant_sentences = self.segment.all_sentences[
+                                 min(center_sentence_index, word_sentence_index): max(center_sentence_index,
+                                                                                      word_sentence_index)]
+            return " ".join(relevant_sentences)
+
+        return sentence_text_generator()
+
 
 class Segment:
 
-    def __init__(self, start, center, end):
+    def __init__(self, start, center, end, sentences):
         self.start = start
         self.center = center
         self.end = end
+        self.all_sentences = sentences
 
     def tokens(self):
         selected = self.start
@@ -62,10 +77,10 @@ class PageDistances:
         for center in self._find_term_instances():
             if last_center is not None:
                 center_midpoint = midpoint(last_center, center)
-                yield Segment(start, last_center, center_midpoint)
+                yield Segment(start, last_center, center_midpoint, self.linked_text.sentences)
                 start = center_midpoint.after
             last_center = center
-        yield Segment(start, last_center, self.linked_text[-1][-1])
+        yield Segment(start, last_center, self.linked_text[-1][-1], self.linked_text.sentences)
 
     def read(self, term_locator: WalkableEntityTree):
         for segment in self.segments:
@@ -73,8 +88,8 @@ class PageDistances:
                 if token.word is None:
                     term_locator.reset()
                     continue
-                for potential_result in term_locator.accept_lemma(token.word):
-                    yield potential_result.contained_data, token.distance
+                for potential_result in term_locator.accept_lemma(token.word.lemma):
+                    yield potential_result.contained_data, token.distance, token.text_generator
 
     def __repr__(self):
         return "\n\n".join("\tSEGMENT:\n" + repr(segment) for segment in self.segments)

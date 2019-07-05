@@ -37,15 +37,26 @@ class WikiPage:
 
 class Link:
     def __init__(self, link_text, target_term_lemmas, discovered_from, link_href=None):
+        self.original_link_text = link_text
         self.lemmatized_link_text, self.link_text_lemmas = lemmatize_term(link_text)
         self.link_href = link_href
         self.discovered_from = discovered_from
         self.target_term_lemmas = target_term_lemmas
-        self.associated_sentences = []
+        self.text_func = None
         self.is_target = self.link_text_lemmas == target_term_lemmas
 
-    def append_sentence(self, sentence):
-        self.associated_sentences.append(sentence)
+    def set_text_func(self, text_func):
+        self.text_func = text_func
+        return self
+
+    def get_linked_text_generator(self):
+        selected = self
+        while selected is not None:
+            yield selected.text_func()
+            selected = selected.discovered_from
+
+    def get_linked_text(self):
+        return " ".join(self.get_linked_text_generator())
 
     def __hash__(self):
         return hash(self.lemmatized_link_text)
