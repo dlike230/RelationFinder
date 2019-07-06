@@ -78,6 +78,8 @@ class EntityTreeNode:
             yield from self.parent.back_trace()
 
     def push(self, lemma_list, contained_data, lemma_list_index=0):
+        if len(lemma_list) == 0:
+            return
         lemma_selected = lemma_list[lemma_list_index]
         selected_node = None
         if lemma_selected in self._children:

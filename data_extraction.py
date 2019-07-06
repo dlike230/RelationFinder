@@ -19,13 +19,15 @@ class Token:
     def text_generator(self):
         def sentence_text_generator():
             center_sentence = self.segment.center
+            if center_sentence is None:
+                return " ".join(sentence.text for sentence in self.segment.all_sentences)
             center_sentence_index = center_sentence.parent_index
             my_sentence = self.word.parent
             word_sentence_index = my_sentence.parent_index
             relevant_sentences = self.segment.all_sentences[
                                  min(center_sentence_index, word_sentence_index): max(center_sentence_index,
                                                                                       word_sentence_index)]
-            return " ".join(relevant_sentences)
+            return " ".join(sentence.text for sentence in relevant_sentences)
 
         return sentence_text_generator()
 
@@ -54,19 +56,19 @@ class Segment:
 
 
 class PageDistances:
-    def __init__(self, linked_text, target_term):
+    def __init__(self, linked_text, start_term):
         self.linked_text = linked_text
-        self.target_term = target_term
-        self._target_term_length = -1
+        self.start_term = start_term
+        self._start_term_length = -1
         self.segments = [segment for segment in self._compute_segments()]
 
     def _find_term_instances(self):
-        target_term_finder = WalkableEntityTree()
-        self._target_term_length = target_term_finder.push(self.target_term)
+        start_term_finder = WalkableEntityTree()
+        self._start_term_length = start_term_finder.push(self.start_term)
         for sentence in self.linked_text:
-            target_term_finder.reset()
+            start_term_finder.reset()
             for word in sentence:
-                target_term_list = list(target_term_finder.accept_lemma(word.lemma))
+                target_term_list = list(start_term_finder.accept_lemma(word.lemma))
                 if len(target_term_list) == 0:
                     continue
                 yield word

@@ -5,45 +5,57 @@ from LinkedListModel import LinkedText
 from data_extraction import PageDistances
 from entity_trees import WalkableEntityTree
 from text_extraction import getInp, get_text
-from utils import lemmatize_term
+from utils import lemmatize_term, get_wiki_url
 
 
 class WikiPage:
 
-    def __init__(self, url, target_term):
+    def __init__(self, soup, text_blob, start_term, target_term):
+        self.start_term = start_term
+        self.target_term = target_term
+        self.lemmatized_target_term = lemmatize_term(target_term)
+        self.distances = PageDistances(LinkedText(text_blob), start_term)
+        self.links = self.extract_links(soup)
+        if target_term not in self.links:
+            self.links[target_term] = Link(target_term, self.lemmatized_target_term, self.lemmatized_target_term, self)
+
+    @staticmethod
+    def generate(start_term, end_term):
+        url = get_wiki_url(start_term)
         htext = getInp(url)
         soup = BeautifulSoup(htext, "html.parser")
         text = get_text(soup)
         text_blob = TextBlob(text)
-        self.distances = PageDistances(LinkedText(text_blob), target_term)
-        self.links = self.extract_links(soup, target_term)
-        if target_term not in self.links:
-            self.links[target_term] = Link(target_term, lemmatize_term(target_term), self)
+        if len(text_blob.sentences) > 0:
+            return WikiPage(soup, text_blob, start_term, end_term)
+        return None
 
     def distance_generator(self):
         link_locator = WalkableEntityTree()
         for link in self.links.values():
-            link_locator.push_lemmas(link.link_text_lemmas, associated_data=link)
+            link_locator.push_lemmas(link.lemmatized_link_text.split(" "), associated_data=link)
         return self.distances.read(link_locator)
 
     def __repr__(self):
         return repr(self.distances)
 
-    def extract_links(self, soup, target_term):
-        lemmatized_text, target_term_lemmas = lemmatize_term(target_term)
-        return {lemmatized_text: Link(link_text, target_term_lemmas, self, link_href=link_href) for link_text, link_href in
-                extract_links_generator(soup)}
+    def extract_links(self, soup):
+        def lemmatized_generator():
+            for link_text, link_href in extract_links_generator(soup):
+                yield link_text, lemmatize_term(link_text), link_href
+        return {lemmatized: Link(link_text, lemmatized, self.lemmatized_target_term, self, link_href=link_href) for
+                link_text, lemmatized, link_href in lemmatized_generator()}
 
 
 class Link:
-    def __init__(self, link_text, target_term_lemmas, discovered_from, link_href=None):
+    def __init__(self, link_text, lemmatized_link_text, lemmatized_target_term, discovered_from, link_href=None):
         self.original_link_text = link_text
-        self.lemmatized_link_text, self.link_text_lemmas = lemmatize_term(link_text)
+        self.lemmatized_link_text = lemmatized_link_text
         self.link_href = link_href
         self.discovered_from = discovered_from
-        self.target_term_lemmas = target_term_lemmas
+        self.lemmatized_target_term = lemmatized_target_term
         self.text_func = None
-        self.is_target = self.link_text_lemmas == target_term_lemmas
+        self.is_target = self.lemmatized_link_text == lemmatized_target_term
 
     def set_text_func(self, text_func):
         self.text_func = text_func
@@ -63,6 +75,9 @@ class Link:
 
     def __eq__(self, other):
         return self.lemmatized_link_text == other.lemmatized_link_text
+
+    def __repr__(self):
+        return self.lemmatized_link_text
 
 
 def extract_links_generator(soup: BeautifulSoup):

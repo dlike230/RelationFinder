@@ -152,11 +152,16 @@ def get_text(soup):
     return text
 
 def getInp(url):
-    req = Request(url)
-    req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36')
-    response = urllib.request.urlopen(req).read()
-    html = response.decode('utf-8', errors='ignore').strip()
-    html = html.replace("\\n", '\n').replace("\\'", "'").replace("\'", "'").replace("\\r", " ").replace("\\t", " ")
-    return html
+    try:
+        req = Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36')
+        response = urllib.request.urlopen(req).read()
+        html = response.decode('utf-8', errors='ignore').strip()
+        html = html.replace("\\n", '\n').replace("\\'", "'").replace("\'", "'").replace("\\r", " ").replace("\\t", " ")
+        print("REACHED", url)
+        return html
+    except Exception:
+        print("COULD NOT REACH", url)
+        return ""
 
 

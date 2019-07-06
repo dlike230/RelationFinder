@@ -20,6 +20,9 @@ class Entry:
     def __hash__(self):
         return hash(self.key)
 
+    def __repr__(self):
+        return repr(self.key) + ": " + repr(self.value)
+
 
 class PriorityQueue:
 
@@ -71,6 +74,13 @@ class PriorityQueue:
             selected_index = parent_index
 
     def push(self, key, value):
+        if value in self.value_to_index:
+            old_entry_index = self.value_to_index[value]
+            old_entry = self.entries[old_entry_index]
+            old_key = old_entry.key
+            if old_key < key:
+                self.decrease_key(old_entry_index, key)
+            return
         index = len(self.entries)
         self.entries.append(Entry(key, value))
         self.value_to_index[value] = index
@@ -100,6 +110,9 @@ class PriorityQueue:
     def __contains__(self, item):
         return item in self.value_to_index
 
+    def __repr__(self):
+        return ", ".join(repr(entry) for entry in self.entries)
+
     def get_key(self, value):
         if value in self.value_to_index:
             return self.entries[self.value_to_index[value]].key
@@ -110,27 +123,30 @@ class PriorityQueue:
         self.entries[0] = self.entries[-1]
         del self.entries[-1]
         self.min_heapify()
-        return first_entry.value
+        return first_entry
 
 
 class DistanceModel:
 
     def __init__(self, start_term, target_term):
         self.result = None
-        start_page = WikiPage(get_wiki_url(start_term), start_term)
+        start_page = WikiPage.generate(start_term, target_term)
         self.start_term = start_term
         self.target_term = target_term
         init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in start_page.distance_generator()]
         self.queue = PriorityQueue(init_entries)
 
     def process_link(self, link, distance):
+        print("Processing", link, "at distance", distance)
         if link.is_target:
             self.result = " ".join(link.get_linked_text())
             return True
-        new_page = WikiPage(get_wiki_url(link.original_link_text), link.original_link_text)
+        new_page = WikiPage.generate(link.original_link_text, self.target_term)
+        if new_page is None:
+            return False
         for link, additional_distance, text_func in new_page.distance_generator():
             new_distance = additional_distance + distance
-            old_distance = self.queue.get_key(link.lemmatized_link_text)
+            old_distance = self.queue.get_key(link)
             if old_distance is None:
                 self.queue.push(new_distance, link.set_text_func(text_func))
             elif new_distance < old_distance:
@@ -138,8 +154,7 @@ class DistanceModel:
         return False
 
     def iterate(self):
-        for temp in self.queue.entries:
-            print(temp.value.lemmatized_link_text)
+        print(self.queue)
         entry = self.queue.pop()
         return self.process_link(entry.value, entry.key)
 

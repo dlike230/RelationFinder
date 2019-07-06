@@ -5,7 +5,7 @@ from textblob import Sentence as blob_sentence
 
 class LinkedText:
     def __init__(self, text_blob: TextBlob):
-        self.sentences = [LinkedSentence(sentence) for sentence in text_blob.sentences]
+        self.sentences = [LinkedSentence(sentence, index) for index, sentence in enumerate(text_blob.sentences)]
         for sentence_a, sentence_b in zip(self.sentences[:-1], self.sentences[1:]):
             sentence_a.next = sentence_b
             sentence_b.previous = sentence_a
@@ -27,9 +27,10 @@ class LinkedText:
 
 class LinkedSentence:
 
-    def __init__(self, sentence: blob_sentence):
+    def __init__(self, sentence: blob_sentence, parent_index):
         self.words = [LinkedWord(word, self, i) for i, word in enumerate(sentence.words)]
         self.text = sentence.string
+        self.parent_index = parent_index
         for word_a, word_b in zip(self.words[:-1], self.words[1:]):
             word_a.next = word_b
             word_b.previous = word_a
