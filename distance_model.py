@@ -150,7 +150,7 @@ class DistanceModel:
             if old_distance is None:
                 self.queue.push(new_distance, link.set_text_func(text_func))
             elif new_distance < old_distance:
-                self.queue.change_key(link.lemmatized_link_text, new_distance)
+                self.queue.change_key(link, new_distance)
         return False
 
     def iterate(self):

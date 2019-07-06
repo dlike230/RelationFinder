@@ -59,20 +59,18 @@ class PageDistances:
     def __init__(self, linked_text, start_term):
         self.linked_text = linked_text
         self.start_term = start_term
-        self._start_term_length = -1
+        self.lemmatized_start_term = None
         self.segments = [segment for segment in self._compute_segments()]
 
     def _find_term_instances(self):
         start_term_finder = WalkableEntityTree()
-        self._start_term_length = start_term_finder.push(self.start_term)
-        print("SEARCHING FOR...", self.start_term)
+        self.lemmatized_start_term = start_term_finder.push(self.start_term)
         for sentence in self.linked_text:
             start_term_finder.reset()
             for word in sentence:
                 target_term_list = list(start_term_finder.accept_lemma(word.lemma))
                 if len(target_term_list) == 0:
                     continue
-                print("FOUND", word)
                 yield word
 
     def _compute_segments(self):
@@ -93,6 +91,8 @@ class PageDistances:
                     term_locator.reset()
                     continue
                 for potential_result in term_locator.accept_lemma(token.word.lemma):
+                    if potential_result.contained_data.lemmatized_link_text == self.lemmatized_start_term:
+                        continue
                     yield potential_result.contained_data, token.distance, token.text_generator
 
     def __repr__(self):

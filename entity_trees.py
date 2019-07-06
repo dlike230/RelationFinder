@@ -116,7 +116,7 @@ class WalkableEntityTree:
         if self._root is None:
             self._root = EntityTreeNode()
         self._root.push(lemmas, associated_data)
-        return len(lemmas)
+        return " ".join(lemmas)
 
     def accept_lemma(self, lemma):
         potential_branch = self._root.traverse(lemma)
