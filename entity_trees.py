@@ -90,7 +90,7 @@ class EntityTreeNode:
             selected_node.parent = self
         new_index = lemma_list_index + 1
         if new_index == len(lemma_list):
-            self.contained_data = contained_data
+            selected_node.contained_data = contained_data
             return
         selected_node.push(lemma_list, contained_data, new_index)
 

@@ -65,12 +65,14 @@ class PageDistances:
     def _find_term_instances(self):
         start_term_finder = WalkableEntityTree()
         self._start_term_length = start_term_finder.push(self.start_term)
+        print("SEARCHING FOR...", self.start_term)
         for sentence in self.linked_text:
             start_term_finder.reset()
             for word in sentence:
                 target_term_list = list(start_term_finder.accept_lemma(word.lemma))
                 if len(target_term_list) == 0:
                     continue
+                print("FOUND", word)
                 yield word
 
     def _compute_segments(self):
