@@ -126,6 +126,9 @@ class PriorityQueue:
         return first_entry
 
 
+PAGE_JUMP_DISADVANTAGE = 5
+
+
 class DistanceModel:
 
     def __init__(self, start_term, target_term):
@@ -133,19 +136,20 @@ class DistanceModel:
         start_page = WikiPage.generate(start_term, target_term, None)
         self.start_term = start_term
         self.target_term = target_term
-        init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in start_page.distance_generator()]
+        init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in
+                        start_page.distance_generator()]
         self.queue = PriorityQueue(init_entries)
 
     def process_link(self, link, distance):
         print("Processing", link, "at distance", distance)
         if link.is_target:
-            self.result = " ".join(link.get_linked_text())
+            self.result = link.get_linked_text()
             return True
         new_page = WikiPage.generate(link.original_link_text, self.target_term, link)
         if new_page is None:
             return False
         for link, additional_distance, text_func in new_page.distance_generator():
-            new_distance = additional_distance + distance
+            new_distance = additional_distance + distance + PAGE_JUMP_DISADVANTAGE
             old_distance = self.queue.get_key(link)
             if old_distance is None:
                 self.queue.push(new_distance, link.set_text_func(text_func))
@@ -157,4 +161,3 @@ class DistanceModel:
         print(self.queue)
         entry = self.queue.pop()
         return self.process_link(entry.value, entry.key)
-
