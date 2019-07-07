@@ -30,6 +30,7 @@ class LinkedSentence:
     def __init__(self, sentence: blob_sentence, parent_index):
         self.words = [LinkedWord(word, self, i) for i, word in enumerate(sentence.words)]
         self.text = sentence.string
+        print("SENTENCE TEXT", self.text)
         self.parent_index = parent_index
         for word_a, word_b in zip(self.words[:-1], self.words[1:]):
             word_a.next = word_b
@@ -63,6 +64,10 @@ class LinkedWord:
         parent_next = self.parent.next
         if parent_next is None:
             return None
+        while len(parent_next) == 0:
+            parent_next = parent_next.next
+            if parent_next is None:
+                return None
         return parent_next[0]
 
     def __str__(self):

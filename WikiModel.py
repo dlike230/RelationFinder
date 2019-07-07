@@ -10,24 +10,25 @@ from utils import lemmatize_term, get_wiki_url
 
 class WikiPage:
 
-    def __init__(self, soup, text_blob, start_term, target_term):
+    def __init__(self, soup, text_blob, start_term, target_term, discovered_from):
+        self.discovered_from = discovered_from
         self.start_term = start_term
         self.target_term = target_term
         self.lemmatized_target_term = lemmatize_term(target_term)
         self.distances = PageDistances(LinkedText(text_blob), start_term)
         self.links = self.extract_links(soup)
         if target_term not in self.links:
-            self.links[target_term] = Link(target_term, self.lemmatized_target_term, self.lemmatized_target_term, self)
+            self.links[target_term] = Link(target_term, self.lemmatized_target_term, self.lemmatized_target_term, self.discovered_from)
 
     @staticmethod
-    def generate(start_term, end_term):
+    def generate(start_term, end_term, discovered_from):
         url = get_wiki_url(start_term)
         htext = getInp(url)
         soup = BeautifulSoup(htext, "html.parser")
         text = get_text(soup)
         text_blob = TextBlob(text)
         if len(text_blob.sentences) > 0:
-            return WikiPage(soup, text_blob, start_term, end_term)
+            return WikiPage(soup, text_blob, start_term, end_term, discovered_from)
         return None
 
     def distance_generator(self):
@@ -43,7 +44,7 @@ class WikiPage:
         def lemmatized_generator():
             for link_text, link_href in extract_links_generator(soup):
                 yield link_text, lemmatize_term(link_text), link_href
-        return {lemmatized: Link(link_text, lemmatized, self.lemmatized_target_term, self, link_href=link_href) for
+        return {lemmatized: Link(link_text, lemmatized, self.lemmatized_target_term, self.discovered_from, link_href=link_href) for
                 link_text, lemmatized, link_href in lemmatized_generator()}
 
 

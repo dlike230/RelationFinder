@@ -1,6 +1,6 @@
 from distance_model import DistanceModel
 
-model = DistanceModel("fruit", "apples")
+model = DistanceModel("fruit", "vegetable")
 
 while not model.iterate():
     pass

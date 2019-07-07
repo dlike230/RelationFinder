@@ -29,7 +29,7 @@ class Token:
                                                                                       word_sentence_index)]
             return " ".join(sentence.text for sentence in relevant_sentences)
 
-        return sentence_text_generator()
+        return sentence_text_generator
 
 
 class Segment:
@@ -93,7 +93,7 @@ class PageDistances:
                 for potential_result in term_locator.accept_lemma(token.word.lemma):
                     if potential_result.contained_data.lemmatized_link_text == self.lemmatized_start_term:
                         continue
-                    yield potential_result.contained_data, token.distance, token.text_generator
+                    yield potential_result.contained_data, token.distance + 1, token.text_generator
 
     def __repr__(self):
         return "\n\n".join("\tSEGMENT:\n" + repr(segment) for segment in self.segments)

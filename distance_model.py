@@ -130,7 +130,7 @@ class DistanceModel:
 
     def __init__(self, start_term, target_term):
         self.result = None
-        start_page = WikiPage.generate(start_term, target_term)
+        start_page = WikiPage.generate(start_term, target_term, None)
         self.start_term = start_term
         self.target_term = target_term
         init_entries = [Entry(distance, link.set_text_func(text_func)) for link, distance, text_func in start_page.distance_generator()]
@@ -141,7 +141,7 @@ class DistanceModel:
         if link.is_target:
             self.result = " ".join(link.get_linked_text())
             return True
-        new_page = WikiPage.generate(link.original_link_text, self.target_term)
+        new_page = WikiPage.generate(link.original_link_text, self.target_term, link)
         if new_page is None:
             return False
         for link, additional_distance, text_func in new_page.distance_generator():
