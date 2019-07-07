@@ -18,7 +18,7 @@ class Token:
     @property
     def text_generator(self):
         def sentence_text_generator():
-            center_sentence = self.segment.center
+            center_sentence = self.segment.center.parent
             if center_sentence is None:
                 return " ".join(sentence.text for sentence in self.segment.all_sentences)
             center_sentence_index = center_sentence.parent_index
@@ -26,7 +26,7 @@ class Token:
             word_sentence_index = my_sentence.parent_index
             relevant_sentences = self.segment.all_sentences[
                                  min(center_sentence_index, word_sentence_index): max(center_sentence_index,
-                                                                                      word_sentence_index)]
+                                                                                      word_sentence_index) + 1]
             return " ".join(sentence.text for sentence in relevant_sentences)
 
         return sentence_text_generator

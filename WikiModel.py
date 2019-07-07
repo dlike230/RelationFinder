@@ -65,7 +65,8 @@ class Link:
     def get_linked_text_generator(self):
         selected = self
         while selected is not None:
-            yield selected.text_func()
+            selected_text = selected.text_func()
+            yield selected_text
             selected = selected.discovered_from
 
     def get_linked_text(self):
