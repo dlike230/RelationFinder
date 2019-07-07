@@ -79,11 +79,11 @@ class LinkedWord:
 def midpoint(word_a: LinkedWord, word_b: LinkedWord):
     desired_index = (word_a.index + word_b.index) // 2
     selected_parent = word_a.parent
+    while len(selected_parent) == 0:
+        selected_parent = selected_parent.next
     while selected_parent[-1].index < desired_index:
         selected_parent = selected_parent.next
     end_offset = selected_parent[-1].index - desired_index
-    while len(selected_parent) == 0:
-        selected_parent = selected_parent.previous
     if len(selected_parent) < end_offset:
         return selected_parent[0]
     return selected_parent[end_offset - 1]
